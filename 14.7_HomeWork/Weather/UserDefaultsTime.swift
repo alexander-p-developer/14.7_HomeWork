@@ -11,10 +11,8 @@ import Foundation
 class UserDefaultsTime {
     static let shared = UserDefaultsTime()
     
-    private let timeDateSince1970Key = "UserDefaultsTime.timeDateSince1970Key"
-    
-    private let currentDateTime = Int(Date().timeIntervalSince1970)
-    
+    private let timeDateSince1970Key = "UserDefaultsTime.timeDateSince1970Key"    
+     
     var timeDateSince1970: Int? {
         set {
             UserDefaults.standard.setValue(newValue, forKey: timeDateSince1970Key)
@@ -24,13 +22,11 @@ class UserDefaultsTime {
         }
     }
     
-    func saveTimeIntervalSince1970 (_ currentTime: Int) {
-        print("-> Текущее время запроса на сервер сохраняется.")
-        UserDefaultsTime.shared.timeDateSince1970 = currentDateTime
+    func saveCurrentTime (_ currentTime: Int) {
+        UserDefaultsTime.shared.timeDateSince1970 = currentTime
     }
     
-    func checkTimeIntervalSince1970OfLoad (_ currentTime: Int) -> Bool {
-        print("-> Проводится проверка возможности отправки запроса на сервер.")
+    func isCanSendRequest (_ currentTime: Int) -> Bool {
         var isTenMinutesOff = false
         if let savedTime = UserDefaultsTime.shared.timeDateSince1970 {
             if savedTime != 0,

@@ -26,7 +26,7 @@ class TaskViewController: UIViewController {
         taskTableView.dataSource = self       // подписка таблицы на источник данных таблицы
         taskTableView.delegate = self         // подписка таблицы на делегат таблицы
         taskTextField.delegate = self         // подписка поля ввода на делегат поля ввода
-        tasks = taskEntity.loadTask()            // заполнение источника данных таблицы данными из базы данных
+        tasks = taskEntity.loadTask()         // заполнение источника данных таблицы данными из базы данных
     }
 }
 

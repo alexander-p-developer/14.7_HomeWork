@@ -45,7 +45,7 @@ class WeatherViewController: UIViewController {
     @IBOutlet weak var sunsetLabel: UILabel!
     
 //MARK: - Constants -
-        
+//   Это для UI
     let radius: CGFloat = 20
     let viewColor: UIColor = .systemPink
     
@@ -55,9 +55,8 @@ class WeatherViewController: UIViewController {
     let configure = ConfigureUI()
     let weatherEntity = WeatherEntity()
     let refreshControl = UIRefreshControl()
-    /*
-     Создаю экземпляры необходимых классов для доступа к их свойствам и методам.
-     */
+    
+//  Создаю экземпляры необходимых классов для доступа к их свойствам и методам.     
 
 //MARK: - viewDidLoad -
 
@@ -66,97 +65,60 @@ class WeatherViewController: UIViewController {
         
         refreshControl.addTarget(self, action: #selector(updateData), for: .valueChanged)
         scrollView.addSubview(refreshControl)
-//        Здесь определяется что должен делать рефреш и где он будет находится.
+//  Здесь определяется что должен делать рефреш и где он будет находится.
         
-        configureWeatherUI()
-//        Настройка UI.
+        configureWeatherUI(alpha: 1) // Настройка UI
+//  Сначала данные загружаются из базы данных, если, конечно, они там есть. При самом первом запуске приложение там, как раз, ничего и нет.
         weatherEntity.loadWeather { (dataWeather) in
             if dataWeather != nil, let weather = dataWeather {
-                print("-> В памяти есть данные.")
-                self.updateUI(weather)
-                print("-> Данные загружены из памяти.")
-            } else {
-                print("-> Не удалось загрузить данные из памяти.")
+                self.updateUI(weather) // если всё в порядке, обновляем UI
             }
-            let currentTime = Int(Date().timeIntervalSince1970)
-            if UserDefaultsTime.shared.checkTimeIntervalSince1970OfLoad(currentTime) {
-                print("-> С предыдущего запроса прошло уже более 10 минут, можно сделать очередной запрос.")
-                print("-> currentTime в WeatherViewController = \(currentTime)")
+            let currentTime = Int(Date().timeIntervalSince1970) // сохраняем текущее время в currentTime
+//  Передаём значение переменной currentTime функции проверки времени предыдущего запроса на сервер
+            if UserDefaultsTime.shared.isCanSendRequest(currentTime) {
+//  Если с предыдущего запроса на сервер прошло уже более десяти минут, отправляем новый запрос на сервер
                 self.networkManager.getWeather { (weather) in
-                    print("->> Данные загружены с сервера <<-")
-                    UserDefaultsTime.shared.saveTimeIntervalSince1970(currentTime)
-                    self.updateUI(weather)
-                    self.weatherEntity.updateWeather(weather)
+//  При успешном выполнении запроса, сохраняем текущее время, передав его специальной функции
+                    UserDefaultsTime.shared.saveCurrentTime(currentTime)
+                    self.updateUI(weather) // Обновим UI, используя загруженные с сервера данные
+                    self.weatherEntity.updateWeather(weather) // и перезапишем их в базу данных
                 }
-            } else {
-                print("-> С предыдущего запроса ещё не прошло 10 минут, в UI данные из памяти.")
             }
-            
-            
-            
+/*
+Если запрос не получилось отправить, то следующая попытка только через десять минут.
+В этот момент на экране может отображаться картинка по умолчанию, та, что собрана в сториборде.
+Чтобы всё же попробовать отправить запрос в любое время, нужно оттянуть вьюшку вниз, чтобы вызвался рефреш.
+*/
         }
-        
-        
-////        Далее идёт обновление UI.
-////        Сначала данные загружаются из базы данных, если, конечно, они там есть. При самом первом запуске приложение там, как раз, ничего и нет.
-//        weatherEntity.loadWeather { (dataWeather) in
-//            if dataWeather != nil, let weather = dataWeather {
-//                self.updateUI(weather)
-//                print("->> Данные загружены из базы данных <<-")
-//            }
-//
-//            /*
-//             Если уж в памяти ничего нет, тогда будем пытаться загрузить их с сервера. Но с одним условием: запрос можно отправить только через десять минут после последнего запроса. Дело в том, что данные на самом сервере обновляются с интервалом десять минут и чаще отправлять запррос не имеет смысла.
-//             Для расчёта этого времени пришлось создать синглтон TimeManager.
-//             */
-//            if TimeManager.shared.checkTimeOfLoad(TimeManager.shared.timeFunc()) {
-//// Запрос можно отправить - прошло более десяти минут.
-//                self.networkManager.getWeather{ (weather) in
-//                    TimeManager.shared.saveCurrentTime(TimeManager.shared.timeFunc())
-//// При успешном ответе запоминаем это время. Следущий запрос возможен через десять минут.
-//                    print("->> Данные загружены с сервера <<-")
-//                    self.updateUI(weather)
-////                    Обновляем UI.
-//                    self.weatherEntity.updateWeather(weather)
-////                    И сохраняем полученные значения в базу данных.
-//                }
-//            } else {
-//                print("->> Данные не удалось загрузить с сервера <<-")
-//                /*
-//                 Если запрос не получилось отправить, то следующая попытка только через десять минут.
-//                 В этот момент на экране может отображаться картинка по умолчанию, та, что собрана в сториборде.
-//                 Чтобы всё же попробовать отправить запрос в любое время, нужно оттянуть вьюшку вниз, чтобы вызвался рефреш.
-//                 */
-//            }
-//        }
     }
     
 //MARK: - Метод, который обновляет данные о погоде при оттягивании вьюшки вниз -
      
-//     Функция, запускаемая рефрешем.
+//  Функция, запускаемая рефрешем.
     @objc func updateData () {
-        var networkOff = true
-//        Никакого ограничения по времени тут нет, так что отправляем запрос немедленно.
+        var networkOff = true // вспомогательная переменная для алёрта
+//  Никакого ограничения по времени тут нет, так что отправляем запрос немедленно.
         networkManager.getWeather { (weather) in
-            print("->> Данные подгружены с сервера <<-")
-//            Обновляем UI.
-            self.updateUI(weather)
-//            Так же сохраним все данные.
-            self.weatherEntity.updateWeather(weather)
+            self.updateUI(weather) // Обновляем UI
+            self.weatherEntity.updateWeather(weather) // и сохраним данные с севера в базу данных
             
             DispatchQueue.main.async {
-                self.refreshControl.endRefreshing()
-//                И отключим рефреш - он уже не нужен.
-                networkOff = false
+                self.refreshControl.endRefreshing() // Данные загружены и рефреш больше не нужен
+                networkOff = false // Алёрт тоже
             }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: {
+// На всякий случай ждём три секунды
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: {
             if networkOff {
+// Если загрузка не получилась, то сделаем UI полупрозрачным и покажем пользователю алёрт
+                self.configureWeatherUI(alpha: 0.5)
                 let alert = UIAlertController(title: "Что-то пошло не так", message: "Проверьте соединение с сетью", preferredStyle: .alert)
                 self.present(alert, animated: true, completion: nil)
-                self.refreshControl.endRefreshing()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: {
+                self.refreshControl.endRefreshing() // рефреш тоже уберём
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: {
+// Через две секунды уберём алёрт и сделаем UI чётким непрозачным
                     alert.dismiss(animated: true, completion: nil)
+                    self.configureWeatherUI(alpha: 1)
                 })
             }
         })
@@ -190,13 +152,13 @@ class WeatherViewController: UIViewController {
     
 //MARK: - конфигурация вьюшек и меток -
         
-    private func configureWeatherUI() {
+    private func configureWeatherUI(alpha: CGFloat) {
         let configViews = [weatherView, pressureView, windView, sysView]
         for view in configViews {
             view?.backgroundColor = viewColor
             view?.layer.cornerRadius = radius
+            view?.alpha = alpha
         }        
-    }
-    
+    }    
 }
 

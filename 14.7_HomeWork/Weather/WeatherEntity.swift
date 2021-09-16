@@ -16,11 +16,9 @@ class WeatherEntity: NSManagedObject {
 //MARK: - метод, загружающий данные из памяти -
 // В этом методе данные загружаются из памяти или возвращаются значения по умолчанию.
     func loadWeather (_ completionHandler: @escaping (ModelWeather?) -> Void) {
-        print("-> Вызвана функция загрузки данных из памяти")
         let context = container.viewContext
         let request: NSFetchRequest<WeatherEntity> = WeatherEntity.fetchRequest()
         if let weatherEntity = try? context.fetch(request) {
-            print("->> Количество элементов базе данных \(weatherEntity.count) <<-")
             let dt = weatherEntity.first?.dtWeather ?? 0
             let name = weatherEntity.first?.name ?? "?"
             let sunriseSys = weatherEntity.first?.sunrise ?? 0
@@ -58,7 +56,6 @@ class WeatherEntity: NSManagedObject {
 // Вернее сначала делается проверка на наличие данных в памяти.
         if let weatherEntity = try? context.fetch(request), weatherEntity.count != 0 {
 // Если они там есть, то, понятно, что они уже устарели и их необходимо удалить.
-            print("->> Данные удаляются из базы данных <<-")
             for weather in weatherEntity {
                 context.delete(weather)
             }
@@ -66,7 +63,6 @@ class WeatherEntity: NSManagedObject {
         try? context.save()
 // А дальше сохранение актуалных данных.
         context.perform {
-            print("->> Данные сохраняются в базу данных <<-")
             let weatherEntity = WeatherEntity(context: context)
             weatherEntity.name = weather.name
             weatherEntity.dtWeather = weather.dt
